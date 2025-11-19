@@ -1,88 +1,110 @@
-const express = require("express");
-const router = express.Router();
-const db = require("../db/connection");
-const { ObjectId } = require("mongodb");
+import express from "express";
+import db from "../db/connection.js";
+import { ObjectId } from "mongodb";
 
-router.get("/", async (req, res) => { //get all posts
-    const collection = db.collection("posts"); //grabbing the collection of posts from the blogd database
-    const sortField = { date: -1, title: -1 }; //sorting by date, then title
-    const results = await collection.find().sort(sortField).toArray(); //converting the collection to an array
-    return res.status(200).send(results);//send results to browser, status code 200.
+const router = express.Router();
+
+router.get("/", async (req, res) => {
+    const search = req.query.search;
+    const collection = db.collection("posts");
+    const sortField = { title: -1 };
+
+    if (!search) {
+        const results = await collection.find().sort(sortField).toArray();
+        return res.status(200).send(results);
+    };
+
+    const filter = {
+        $or: [
+            { title: { $regex: search, $options: "i" } },
+            { content: { $regex: search, $options: "i" } },
+            { category: { $regex: search, $options: "i" } },
+            { tags: { $regex: search, $options: "i" } }
+        ]
+    }
+
+    const results = await collection.find(filter).sort(sortField).toArray();
+    return res.status(200).send(results);
+
 });
 
-router.get("/:id", async (req, res) => { //get a post given an id
+router.get("/:id", async (req, res) => {
     const collection = db.collection("posts");
-    const query = { _id: new ObjectId(req.params.id) }; //get document using ID
+    const query = { _id: new ObjectId(req.params.id) };
     const results = await collection.findOne(query);
-    if (!result) {
+
+    if (!results) {
         return res.status(404).send("Post not found");
     }
     return res.status(200).send(results);
 });
 
-router.post("/", async (req, res) => {  //create a new post
+router.post("/", async (req, res) => {
     const collection = db.collection("posts");
 
     try {
-        let newDocument = {
-            "title": req.body.title,
-            "content": req.body.content,
-            "category": req.body.category,
-            "tags": req.body.tags,
-        }
+        const newDocument = {
+            title: req.body.title,
+            content: req.body.content,
+            category: req.body.category,
+            tags: req.body.tags,
+        };
 
         const results = await collection.insertOne(newDocument);
         return res.status(201).send(results);
+
     } catch (err) {
         console.error(err);
-        res.status(400).send("Error adding record")
+        return res.status(400).send("Error adding record");
     }
+});
 
-})
-
-router.delete("/:id", async (req, res) => { //delete a post given an id
+router.delete("/:id", async (req, res) => {
     try {
         const collection = db.collection("posts");
-        const query = { _id: new ObjectId(req.params.id) }; //get document using ID
+        const query = { _id: new ObjectId(req.params.id) };
         const result = await collection.deleteOne(query);
 
-        if (result.deletedCount === 1) {
-            console.log("Successfully deleted blog!")
-        } else {
+        if (result.deletedCount === 0) {
             return res.status(404).send("Post not found");
         }
-        return res.status(204).send(result);
+
+        return res.status(204).send("Record deleted");
+
     } catch (err) {
         console.error(err);
-        res.status(404).send("Error deleting record");
+        return res.status(404).send("Error deleting record");
     }
-})
+});
 
-router.put("/:id", async (req, res) => { //edit a post
+router.put("/:id", async (req, res) => {
     try {
-        collection = db.collection("posts")  //dawg this could have been a global variable\
-        updatedDoc = {
+        const collection = db.collection("posts");
+        const updatedDoc = {
             $set: {
-                "title": req.body.title,
-                "content": req.body.content,
-                "category": req.body.category,
-                "tags": req.body.tags,
+                title: req.body.title,
+                content: req.body.content,
+                category: req.body.category,
+                tags: req.body.tags,
             }
-        }
+        };
 
-        query = { _id: new ObjectId(req.params.id) }; //get document using ID
-        options = {};
+        const query = { _id: new ObjectId(req.params.id) };
+        const options = {};
         const result = await collection.updateOne(query, updatedDoc, options);
+
         if (result.matchedCount === 0) {
             return res.status(404).send("Post not found");
         }
-        return res.status(200).send("Record updated")
+
+        return res.status(200).send("Record updated");
 
     } catch (err) {
         console.error(err);
-        res.status(404).send("Error updating record");
+        return res.status(404).send("Error updating record");
     }
-})
+});
 
-module.exports = router;
 
+
+export default router;

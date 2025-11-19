@@ -1,6 +1,7 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+import { MongoClient, ServerApiVersion } from "mongodb";
+
 const uri = process.env.URI_KEY || "";
-PORT=5050
+const PORT = 5050;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -8,7 +9,7 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
-  appName:"blog-app",
+  appName: "blog-app",
 });
 
 try {
@@ -21,6 +22,6 @@ try {
   console.error(err);
 }
 
-let db = client.db("blog");
+const db = client.db("blog");
 
 export default db;
