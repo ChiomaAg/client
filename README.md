@@ -69,3 +69,5 @@ npm start
 Environment variable required:
 
 MONGO_URI=your_connection_string
+
+Assignment from: https://roadmap.sh/projects/blogging-platform-api
